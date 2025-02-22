@@ -1,1 +1,5 @@
+/backups
 /migrations/
+config.json
+/.venv
+.idea
