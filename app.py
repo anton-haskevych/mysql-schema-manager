@@ -11,6 +11,9 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 import mysql.connector
 from werkzeug.utils import secure_filename
 from markupsafe import Markup
+import os
+import subprocess
+import concurrent.futures
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
@@ -123,40 +126,53 @@ def set_global_time_zone(time_zone):
     ]
     subprocess.check_call(cmd, env=env)
 
+
 def apply_migration_version(version_name: str) -> bool:
     migration_path = os.path.join(config['migration_folder'], version_name)
     if not os.path.isdir(migration_path):
         flash("Migration version not found.", "danger")
         return False
+
+    # Drop all non-system schemas first (warning: destructive!)
     if not drop_all_schemas():
         return False
 
     env = os.environ.copy()
     env['MYSQL_PWD'] = config['mysql_password']
 
+    # Gather migration tasks from all .sql files in the directory tree.
+    migration_tasks = []
     for root, _, files in os.walk(migration_path):
         for file in sorted(files):
             if not file.endswith('.sql'):
                 print(f"Not ends with .sql: {file}")
                 continue
-
             db_name = os.path.splitext(file)[0]
             file_path = os.path.join(root, file)
-            with open(file_path, 'r', encoding='utf-8') as f:
-                contents = f.read().strip()
+            migration_tasks.append((db_name, file_path))
 
-            create_db_command = (
-                f"mysql -u {config['mysql_username']} -e 'CREATE DATABASE IF NOT EXISTS {db_name}'"
-            )
-            apply_command = (
-                f"mysql -u {config['mysql_username']} {db_name} < {file_path}"
-            )
+    def apply_migration_file(db_name: str, file_path: str) -> bool:
+        create_db_command = (
+            f"mysql -u {config['mysql_username']} -e 'CREATE DATABASE IF NOT EXISTS {db_name}'"
+        )
+        apply_command = (
+            f"mysql -u {config['mysql_username']} {db_name} < {file_path}"
+        )
+        try:
+            subprocess.check_call(create_db_command, shell=True, env=env)
+            subprocess.check_call(apply_command, shell=True, env=env)
+            return True
+        except subprocess.CalledProcessError as e:
+            flash(f"Error applying snapshot to {db_name}: {e}", "danger")
+            return False
 
-            try:
-                subprocess.check_call(create_db_command, shell=True, env=env)
-                subprocess.check_call(apply_command, shell=True, env=env)
-            except subprocess.CalledProcessError as e:
-                flash(f"Error applying snapshot to {db_name}: {e}", "danger")
+    # Run migrations concurrently.
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(apply_migration_file, db_name, file_path)
+                   for db_name, file_path in migration_tasks]
+
+        for future in concurrent.futures.as_completed(futures):
+            if not future.result():
                 return False
 
     flash("Migration applied successfully.", "success")
