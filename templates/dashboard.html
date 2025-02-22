@@ -1,145 +1,159 @@
 {% extends "base.html" %}
 {% from "components/folder_input.html" import folder_input %}
 {% block content %}
-<h2>DevOps MySQL Schema Manager</h2>
+    <h2>DevOps MySQL Schema Manager</h2>
 
-<!-- Configuration Section -->
-<div class="card mb-4">
-  <div class="card-header">Configuration</div>
-  <div class="card-body">
-    <form method="POST" action="{{ url_for('update_config') }}">
-      <div class="form-group">
-        <label for="mysql_username">MySQL Username</label>
-        <input type="text" class="form-control" name="mysql_username" id="mysql_username" value="{{ config.mysql_username }}">
-      </div>
-      <div class="form-group">
-        <label for="mysql_password">MySQL Password</label>
-        <input type="password" class="form-control" name="mysql_password" id="mysql_password" value="{{ config.mysql_password }}">
-      </div>
-      <div class="form-group">
-        <label for="migration_folder">Migration Folder (Default for App Operations)</label>
-        <input type="text" class="form-control" name="migration_folder" id="migration_folder" value="{{ config.migration_folder }}">
-      </div>
-      <button type="submit" class="btn btn-primary">Save Configuration</button>
-    </form>
-  </div>
-</div>
+    <!-- Configuration Section -->
+    <div class="card mb-4">
+        <div class="card-header">Configuration</div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('update_config') }}">
+                <div class="form-group">
+                    <label for="mysql_username">MySQL Username</label>
+                    <input type="text" class="form-control" name="mysql_username" id="mysql_username"
+                           value="{{ config.mysql_username }}">
+                </div>
+                <div class="form-group">
+                    <label for="mysql_password">MySQL Password</label>
+                    <input type="password" class="form-control" name="mysql_password" id="mysql_password"
+                           value="{{ config.mysql_password }}">
+                </div>
+                <div class="form-group">
+                    <label for="migration_folder">Migration Folder (Default for App Operations)</label>
+                    <input type="text" class="form-control" name="migration_folder" id="migration_folder"
+                           value="{{ config.migration_folder }}">
+                </div>
+                <button type="submit" class="btn btn-primary">Save Configuration</button>
+            </form>
+        </div>
+    </div>
 
-<!-- Migration Management Section -->
-<!-- Migration Management Section -->
-<div class="card mb-4" id="migrations">
-  <div class="card-header">Migrations</div>
-  <div class="card-body">
-    <h5>Available Migration Versions</h5>
-    {% if migrations %}
-      <table class="table table-bordered">
-        <thead>
-          <tr>
-            <th>Version</th>
-            <th>Created</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for migration in migrations %}
-            <tr>
-              <td>{{ migration.name }}</td>
-              <td>{{ migration.created.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-              <td>
-                <form method="POST" action="{{ url_for('delete_migration') }}" style="display:inline;">
-                  <input type="hidden" name="version" value="{{ migration.name }}">
-                  <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete migration version {{ migration.name }}?');">Delete</button>
-                </form>
-                <form method="POST" action="{{ url_for('apply_migration') }}" style="display:inline;">
-                  <input type="hidden" name="version" value="{{ migration.name }}">
-                  <button type="submit" class="btn btn-success btn-sm">Apply</button>
-                </form>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      <!-- Pagination Controls with Anchor -->
-      {% if total_pages > 1 %}
-      <nav aria-label="Page navigation">
-        <ul class="pagination">
-          <li class="page-item {% if page == 1 %}disabled{% endif %}">
-            <a class="page-link" href="{{ url_for('dashboard', page=page-1) }}#migrations" tabindex="-1">Previous</a>
-          </li>
-          {% for p in range(1, total_pages + 1) %}
-          <li class="page-item {% if p == page %}active{% endif %}">
-            <a class="page-link" href="{{ url_for('dashboard', page=p) }}#migrations">{{ p }}</a>
-          </li>
-          {% endfor %}
-          <li class="page-item {% if page == total_pages %}disabled{% endif %}">
-            <a class="page-link" href="{{ url_for('dashboard', page=page+1) }}#migrations">Next</a>
-          </li>
-        </ul>
-      </nav>
-      {% endif %}
-    {% else %}
-      <p>No migration versions available.</p>
-    {% endif %}
-  </div>
-</div>
+    <!-- Migration Management Section -->
+    <!-- Migration Management Section -->
+    <div class="card mb-4" id="migrations">
+        <div class="card-header">Migrations</div>
+        <div class="card-body">
+            <h5>Available Migration Versions</h5>
+            {% if migrations %}
+                <table class="table table-bordered">
+                    <thead>
+                    <tr>
+                        <th>Version</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for migration in migrations %}
+                        <tr>
+                            <td>{{ migration.name }}</td>
+                            <td>{{ migration.created.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>
+                                <form method="POST" action="{{ url_for('delete_migration') }}" style="display:inline;">
+                                    <input type="hidden" name="version" value="{{ migration.name }}">
+                                    <button type="submit" class="btn btn-danger btn-sm"
+                                            onclick="return confirm('Delete migration version {{ migration.name }}?');">
+                                        Delete
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('apply_migration') }}" style="display:inline;">
+                                    <input type="hidden" name="version" value="{{ migration.name }}">
+                                        <a href="{{ url_for('confirm_apply_migration', version=migration.name) }}"
+                                           class="btn btn-success btn-sm">
+                                            Apply
+                                        </a>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                <!-- Pagination Controls with Anchor -->
+                {% if total_pages > 1 %}
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination">
+                            <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('dashboard', page=page-1) }}#migrations"
+                                   tabindex="-1">Previous</a>
+                            </li>
+                            {% for p in range(1, total_pages + 1) %}
+                                <li class="page-item {% if p == page %}active{% endif %}">
+                                    <a class="page-link"
+                                       href="{{ url_for('dashboard', page=p) }}#migrations">{{ p }}</a>
+                                </li>
+                            {% endfor %}
+                            <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('dashboard', page=page+1) }}#migrations">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+                {% endif %}
+            {% else %}
+                <p>No migration versions available.</p>
+            {% endif %}
+        </div>
+    </div>
 
 
-<!-- Upload Migration Section -->
-<div class="card mb-4">
-  <div class="card-header">Upload New Migration Version</div>
-  <div class="card-body">
-    <form method="POST" action="{{ url_for('upload_migration') }}" enctype="multipart/form-data" id="uploadForm">
-      {{ folder_input('Migration Folder Path', 'upload_folder', 'upload_folder', config.migration_folder) }}
-      <div class="form-group">
-        <label for="migration_files">Select Folder or Zip File</label>
-        <input type="file" class="form-control-file" id="migration_files" name="migration_files" webkitdirectory directory multiple disabled>
-        <small class="form-text text-muted">
-          You can upload an entire folder (select directory) or a zip file containing .sql files.
-        </small>
-      </div>
-      <button type="submit" class="btn btn-primary" id="uploadButton" disabled>Upload Migration</button>
-    </form>
-  </div>
-</div>
+    <!-- Upload Migration Section -->
+    <div class="card mb-4">
+        <div class="card-header">Upload New Migration Version</div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('upload_migration') }}" enctype="multipart/form-data"
+                  id="uploadForm">
+                {{ folder_input('Migration Folder Path', 'upload_folder', 'upload_folder', config.migration_folder) }}
+                <div class="form-group">
+                    <label for="migration_files">Select Folder or Zip File</label>
+                    <input type="file" class="form-control-file" id="migration_files" name="migration_files"
+                           webkitdirectory directory multiple disabled>
+                    <small class="form-text text-muted">
+                        You can upload an entire folder (select directory) or a zip file containing .sql files.
+                    </small>
+                </div>
+                <button type="submit" class="btn btn-primary" id="uploadButton" disabled>Upload Migration</button>
+            </form>
+        </div>
+    </div>
 
-<!-- Actions Section -->
-<div class="card mb-4">
-  <div class="card-header">Actions</div>
-  <div class="card-body">
-    <form method="POST" action="{{ url_for('drop_schemas') }}">
-      <button type="submit" class="btn btn-warning" onclick="return confirm('Are you sure you want to drop all schemas?');">
-        Drop All Schemas
-      </button>
-    </form>
-  </div>
-</div>
+    <!-- Actions Section -->
+    <div class="card mb-4">
+        <div class="card-header">Actions</div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('drop_schemas') }}">
+                <button type="submit" class="btn btn-warning"
+                        onclick="return confirm('Are you sure you want to drop all schemas?');">
+                    Drop All Schemas
+                </button>
+            </form>
+        </div>
+    </div>
 
-<!-- New Database Dump Section -->
-<div class="card mb-4">
-  <div class="card-header">Database Dump</div>
-  <div class="card-body">
-    <a href="{{ url_for('dump_database') }}" class="btn btn-info">Dump Database</a>
-  </div>
-</div>
+    <!-- New Database Dump Section -->
+    <div class="card mb-4">
+        <div class="card-header">Database Dump</div>
+        <div class="card-body">
+            <a href="{{ url_for('dump_database') }}" class="btn btn-info">Dump Database</a>
+        </div>
+    </div>
 
-<script>
-  // Enable file input and upload button only if folder path is entered
-  const folderInput = document.getElementById('upload_folder');
-  const fileInput = document.getElementById('migration_files');
-  const uploadButton = document.getElementById('uploadButton');
+    <script>
+        // Enable file input and upload button only if folder path is entered
+        const folderInput = document.getElementById('upload_folder');
+        const fileInput = document.getElementById('migration_files');
+        const uploadButton = document.getElementById('uploadButton');
 
-  folderInput.addEventListener('input', function() {
-    const folderPath = this.value.trim();
-    if (folderPath !== '') {
-      fileInput.disabled = false;
-      uploadButton.disabled = false;
-    } else {
-      fileInput.disabled = true;
-      uploadButton.disabled = true;
-    }
-  });
-  // Trigger input event on load to set initial state
-  folderInput.dispatchEvent(new Event('input'));
-</script>
+        folderInput.addEventListener('input', function () {
+            const folderPath = this.value.trim();
+            if (folderPath !== '') {
+                fileInput.disabled = false;
+                uploadButton.disabled = false;
+            } else {
+                fileInput.disabled = true;
+                uploadButton.disabled = true;
+            }
+        });
+        // Trigger input event on load to set initial state
+        folderInput.dispatchEvent(new Event('input'));
+    </script>
 
 {% endblock %}
