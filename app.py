@@ -10,6 +10,8 @@ import re
 from flask import Flask, render_template, request, redirect, url_for, flash
 import mysql.connector
 from werkzeug.utils import secure_filename
+from markupsafe import Markup
+
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 
@@ -17,6 +19,7 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace with a strong secret key
 
 CONFIG_FILE = 'config.json'
+
 
 def is_config_valid():
     # A simple validity check: all required config values are non-empty.
@@ -39,14 +42,17 @@ def load_config():
     config.setdefault('backup_folder', os.path.join(os.getcwd(), 'backups'))
     return config
 
+
 def save_config(config):
     with open(CONFIG_FILE, 'w') as f:
         json.dump(config, f, indent=4)
+
 
 # Global configuration loaded on startup
 config = load_config()
 os.makedirs(config['migration_folder'], exist_ok=True)
 os.makedirs(config['backup_folder'], exist_ok=True)
+
 
 def get_mysql_connection():
     try:
@@ -59,6 +65,7 @@ def get_mysql_connection():
     except mysql.connector.Error as err:
         flash(f"MySQL connection error: {err}", "danger")
         return None
+
 
 def drop_all_schemas():
     """
@@ -85,6 +92,7 @@ def drop_all_schemas():
         flash(f"Error dropping schemas: {err}", "danger")
         return False
 
+
 def list_sql_files(directory):
     """List all .sql files in a directory."""
     return [
@@ -92,6 +100,7 @@ def list_sql_files(directory):
         for f in os.listdir(directory)
         if os.path.isfile(os.path.join(directory, f)) and f.endswith('.sql')
     ]
+
 
 def check_and_remove_line(file_path, line_to_remove):
     """Remove a specific line from a file, if present."""
@@ -101,6 +110,7 @@ def check_and_remove_line(file_path, line_to_remove):
         for line in lines:
             if line.strip() != line_to_remove.encode('utf-8'):
                 file.write(line)
+
 
 def set_global_time_zone(time_zone):
     """Set MySQL global time zone using your credentials."""
@@ -112,6 +122,7 @@ def set_global_time_zone(time_zone):
         "-e", f"SET GLOBAL time_zone = '{time_zone}';"
     ]
     subprocess.check_call(cmd, env=env)
+
 
 def apply_migration_version(version_name):
     migration_path = os.path.join(config['migration_folder'], version_name)
@@ -198,6 +209,7 @@ def apply_migration_version(version_name):
     flash("Migration applied successfully.", "success")
     return True
 
+
 def list_migration_versions():
     migration_versions = []
     folder = config['migration_folder']
@@ -212,6 +224,7 @@ def list_migration_versions():
                 })
     migration_versions.sort(key=lambda x: x['created'], reverse=True)
     return migration_versions
+
 
 # -----------------------------
 # Flask Routes
@@ -268,6 +281,7 @@ def update_config():
     flash("Configuration updated.", "success")
     return redirect(url_for('dashboard'))
 
+
 @app.route('/drop_schemas', methods=['POST'])
 def drop_schemas():
     if drop_all_schemas():
@@ -275,6 +289,7 @@ def drop_schemas():
     else:
         flash("Failed to drop schemas.", "danger")
     return redirect(url_for('dashboard'))
+
 
 @app.route('/apply_migration', methods=['POST'])
 def apply_migration():
@@ -324,6 +339,7 @@ def upload_migration():
         flash("Migration file uploaded.", "success")
     return redirect(url_for('dashboard'))
 
+
 @app.route('/delete_migration', methods=['POST'])
 def delete_migration():
     version = request.form.get('version')
@@ -340,6 +356,7 @@ def delete_migration():
     else:
         flash("No migration version specified.", "warning")
     return redirect(url_for('dashboard'))
+
 
 @app.route('/dump_database', methods=['GET', 'POST'])
 def dump_database():
@@ -433,6 +450,17 @@ def confirm_apply_migration(version):
         return jsonify({"success": True})
     else:
         return jsonify({"success": False, "message": "Error applying migration."}), 500
+
+
+@app.route('/readme')
+def readme():
+    try:
+        with open('README.md', 'r', encoding='utf-8') as f:
+            content = f.read()
+    except Exception as e:
+        content = f"Error reading README.md: {e}"
+    # Render the content inside a preformatted block
+    return render_template('readme.html', content=Markup(f"<pre>{content}</pre>"))
 
 
 if __name__ == '__main__':

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h2>README</h2>
+  <div class="card">
+    <div class="card-body">
+      {{ content|safe }}
+    </div>
+  </div>
+  <a href="{{ url_for('dashboard') }}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+</div>
+{% endblock %}
