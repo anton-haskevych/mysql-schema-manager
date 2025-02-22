@@ -1,6 +1,0 @@
-{
-    "mysql_username": "admin",
-    "mysql_password": "password",
-    "migration_folder": "/Users/antonhaskevych/PyCharmProjects/mysql-schema-manager/migrations",
-    "backup_folder": "/Users/antonhaskevych/PyCharmProjects/flaskProject/backups"
-}
