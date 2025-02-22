@@ -18,6 +18,11 @@ app.secret_key = 'your_secret_key'  # Replace with a strong secret key
 
 CONFIG_FILE = 'config.json'
 
+def is_config_valid():
+    # A simple validity check: all required config values are non-empty.
+    return bool(config.get('mysql_username') and config.get('mysql_password') and config.get('migration_folder'))
+
+
 def load_config():
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, 'r') as f:
@@ -222,11 +227,16 @@ def dashboard():
     start = (page - 1) * per_page
     end = start + per_page
     paginated_migrations = migration_versions[start:end]
+
+    valid_config = is_config_valid()
+
     return render_template('dashboard.html',
                            config=config,
                            migrations=paginated_migrations,
                            page=page,
-                           total_pages=total_pages)
+                           total_pages=total_pages,
+                           valid_config=valid_config)
+
 
 @app.route('/update_config', methods=['POST'])
 def update_config():
@@ -236,6 +246,20 @@ def update_config():
     migration_folder = request.form.get('migration_folder', '').strip()
     if not migration_folder:
         migration_folder = os.path.join(os.getcwd(), 'migrations')
+
+    # Attempt to connect to the MySQL database using the provided credentials.
+    try:
+        conn = mysql.connector.connect(
+            host='localhost',
+            user=mysql_username,
+            password=mysql_password
+        )
+        conn.close()
+    except mysql.connector.Error as err:
+        flash(f"Error connecting to MySQL with provided credentials: {err}", "danger")
+        return redirect(url_for('dashboard'))
+
+    # If connection succeeds, update configuration.
     config['mysql_username'] = mysql_username
     config['mysql_password'] = mysql_password
     config['migration_folder'] = migration_folder
@@ -254,6 +278,9 @@ def drop_schemas():
 
 @app.route('/apply_migration', methods=['POST'])
 def apply_migration():
+    if not is_config_valid():
+        flash("Configuration is missing or invalid. Please update your configuration first.", "warning")
+        return redirect(url_for('dashboard'))
     version = request.form.get('version')
     if version:
         if apply_migration_version(version):
@@ -263,6 +290,7 @@ def apply_migration():
     else:
         flash("No migration version selected.", "warning")
     return redirect(url_for('dashboard'))
+
 
 @app.route('/upload_migration', methods=['POST'])
 def upload_migration():
