@@ -123,88 +123,41 @@ def set_global_time_zone(time_zone):
     ]
     subprocess.check_call(cmd, env=env)
 
-
-def apply_migration_version(version_name):
+def apply_migration_version(version_name: str) -> bool:
     migration_path = os.path.join(config['migration_folder'], version_name)
     if not os.path.isdir(migration_path):
         flash("Migration version not found.", "danger")
         return False
-
-    # Drop all non-system schemas first (warning: destructive!)
     if not drop_all_schemas():
         return False
 
     env = os.environ.copy()
     env['MYSQL_PWD'] = config['mysql_password']
 
-    for root, dirs, files in os.walk(migration_path):
-        files.sort()  # Ensure consistent order
-        for file in files:
-            if file.endswith('.sql'):
-                file_path = os.path.join(root, file)
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    contents = f.read().strip()
-                # Check for a USE statement
-                if not re.search(r'\bUSE\s+[`"]?\w+[`"]?', contents, re.IGNORECASE):
-                    # No USE found: assume target database is the file's base name (e.g. demo.sql -> demo)
-                    db_name = os.path.basename(file).split('.')[0]
-                    # Create the database if needed
-                    create_db_cmd = [
-                        "mysql",
-                        "-u", config['mysql_username'],
-                        "-h", "localhost",
-                        "-e", f"CREATE DATABASE IF NOT EXISTS `{db_name}`;"
-                    ]
-                    try:
-                        subprocess.check_call(create_db_cmd, env=env)
-                    except subprocess.CalledProcessError as e:
-                        flash(f"Error creating database {db_name}: {e}", "danger")
-                        return False
-                    # Run the file with the default database using -D flag
-                    cmd = [
-                        "mysql",
-                        "-u", config['mysql_username'],
-                        "-h", "localhost",
-                        "-D", db_name
-                    ]
-                else:
-                    # File contains a USE statement; try to extract the database name
-                    match = re.search(r'\bUSE\s+[`"]?(\w+)[`"]?', contents, re.IGNORECASE)
-                    if match:
-                        db_name = match.group(1)
-                        # Ensure that database exists
-                        create_db_cmd = [
-                            "mysql",
-                            "-u", config['mysql_username'],
-                            "-h", "localhost",
-                            "-e", f"CREATE DATABASE IF NOT EXISTS `{db_name}`;"
-                        ]
-                        try:
-                            subprocess.check_call(create_db_cmd, env=env)
-                        except subprocess.CalledProcessError as e:
-                            flash(f"Error creating database {db_name}: {e}", "danger")
-                            return False
-                        # Force the default database via -D flag even though a USE is in the file
-                        cmd = [
-                            "mysql",
-                            "-u", config['mysql_username'],
-                            "-h", "localhost",
-                            "-D", db_name
-                        ]
-                    else:
-                        # Fallback (should not happen): run with host parameter only.
-                        cmd = [
-                            "mysql",
-                            "-u", config['mysql_username'],
-                            "-h", "localhost"
-                        ]
-                # Execute the command by passing the file as standard input.
-                with open(file_path, 'rb') as f:
-                    try:
-                        subprocess.check_call(cmd, stdin=f, env=env)
-                    except subprocess.CalledProcessError as e:
-                        flash(f"Error applying migration file {file}: {e}", "danger")
-                        return False
+    for root, _, files in os.walk(migration_path):
+        for file in sorted(files):
+            if not file.endswith('.sql'):
+                print(f"Not ends with .sql: {file}")
+                continue
+
+            db_name = os.path.splitext(file)[0]
+            file_path = os.path.join(root, file)
+            with open(file_path, 'r', encoding='utf-8') as f:
+                contents = f.read().strip()
+
+            create_db_command = (
+                f"mysql -u {config['mysql_username']} -e 'CREATE DATABASE IF NOT EXISTS {db_name}'"
+            )
+            apply_command = (
+                f"mysql -u {config['mysql_username']} {db_name} < {file_path}"
+            )
+
+            try:
+                subprocess.check_call(create_db_command, shell=True, env=env)
+                subprocess.check_call(apply_command, shell=True, env=env)
+            except subprocess.CalledProcessError as e:
+                flash(f"Error applying snapshot to {db_name}: {e}", "danger")
+                return False
 
     flash("Migration applied successfully.", "success")
     return True
