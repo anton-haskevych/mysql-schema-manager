@@ -3,4 +3,4 @@
 config.json
 /.venv
 .idea
-__pycache__A
+__pycache__
