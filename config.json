@@ -1,0 +1,5 @@
+{
+    "mysql_username": "admin",
+    "mysql_password": "password",
+    "migration_folder": "/Users/antonhaskevych/PyCharmProjects/flaskProject/migrations"
+}

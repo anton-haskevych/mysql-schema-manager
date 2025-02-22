@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Dump Database</h2>
+<form method="POST" action="{{ url_for('dump_database') }}" id="dumpForm">
+  <div class="form-group">
+    <label for="host">MySQL Host</label>
+    <input type="text" class="form-control" id="host" name="host" placeholder="Enter MySQL host" value="localhost">
+  </div>
+  <div class="form-group">
+    <label for="dump_username">MySQL Username</label>
+    <input type="text" class="form-control" id="dump_username" name="dump_username" placeholder="Enter MySQL username" value="{{ config.mysql_username }}">
+  </div>
+  <div class="form-group">
+    <label for="dump_password">MySQL Password</label>
+    <input type="password" class="form-control" id="dump_password" name="dump_password" placeholder="Enter MySQL password" value="{{ config.mysql_password }}">
+  </div>
+  <div class="form-group">
+    <label for="backup_folder">Backup Folder</label>
+    <input type="text" class="form-control" id="backup_folder" name="backup_folder" placeholder="Enter folder to store backups" value="{{ cwd }}/migrations">
+  </div>
+  <button type="submit" class="btn btn-primary" id="dumpButton">Take Dump</button>
+</form>
+
+<!-- Progress Bar -->
+<div id="progressContainer" style="display: none; margin-top: 20px;">
+  <div class="progress">
+    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+         style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+  </div>
+  <p id="progressText" style="margin-top: 10px;">Starting backup...</p>
+</div>
+
+<script>
+  const dumpForm = document.getElementById('dumpForm');
+  const dumpButton = document.getElementById('dumpButton');
+  const progressContainer = document.getElementById('progressContainer');
+  const progressBar = document.getElementById('progressBar');
+  const progressText = document.getElementById('progressText');
+
+  dumpForm.addEventListener('submit', function(event) {
+    // Disable the button and show progress bar
+    dumpButton.disabled = true;
+    progressContainer.style.display = 'block';
+
+    // Simulate progress updates
+    let progress = 0;
+    const interval = setInterval(() => {
+      // Increase progress by a random value until it reaches 95%
+      progress += Math.floor(Math.random() * 5) + 1;
+      if (progress > 95) {
+        progress = 95;
+      }
+      progressBar.style.width = progress + '%';
+      progressBar.setAttribute('aria-valuenow', progress);
+      progressBar.innerText = progress + '%';
+      progressText.innerText = "Backing up databases... " + progress + "% completed";
+    }, 500);
+
+    // When the form is submitted, the page will eventually reload
+    // Clear the interval after a delay (this code may not run if the server responds quickly)
+    setTimeout(() => {
+      clearInterval(interval);
+      progressBar.style.width = '100%';
+      progressBar.setAttribute('aria-valuenow', 100);
+      progressBar.innerText = '100%';
+      progressText.innerText = "Backup complete!";
+    }, 30000); // 30 seconds as a fallback – the actual redirect will cancel this
+  });
+</script>
+{% endblock %}

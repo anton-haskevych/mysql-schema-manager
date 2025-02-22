@@ -1,0 +1,6 @@
+{% macro folder_input(label, id, name, value='') %}
+<div class="form-group">
+  <label for="{{ id }}">{{ label }}</label>
+  <input type="text" class="form-control" id="{{ id }}" name="{{ name }}" placeholder="Enter folder path" value="{{ value }}">
+</div>
+{% endmacro %}
