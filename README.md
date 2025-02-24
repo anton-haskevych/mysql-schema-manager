@@ -2,6 +2,8 @@
 
 **MySQL Schema Manager** is a web-based tool built with Flask for managing MySQL schemas and migrations in multitenant environments. It streamlines operations for DevOps and database administrators by offering features such as:
 
+![In-App Screenshot](static/in-app-screenshot.png)
+
 - **Configuration Validation:** Ensures proper MySQL credentials and paths before enabling features.
 - **Migration Management:** Upload, list, apply, and delete migration versions.
 - **Database Backup:** Create backups (dumps) of non-system MySQL databases.
