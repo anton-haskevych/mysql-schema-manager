@@ -1,35 +1,56 @@
 {% extends "base.html" %}
 {% block content %}
     <div class="card mb-4">
-        <div class="card-header">
-            Configuration
-        </div>
+        <div class="card-header">Configuration</div>
         <div class="card-body">
             <form method="POST" action="{{ url_for('update_config') }}">
-                <div class="form-group">
-                    <label for="mysql_username">MySQL Username</label>
-                    <input type="text" class="form-control" name="mysql_username" id="mysql_username"
-                           value="{{ config.mysql_username }}">
+                <!-- Username and Password Row -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="mysql_username">MySQL Username</label>
+                            <input type="text" class="form-control" name="mysql_username" id="mysql_username"
+                                   value="{{ config.mysql_username }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="mysql_password">MySQL Password</label>
+                            <input type="password" class="form-control" name="mysql_password" id="mysql_password"
+                                   value="{{ config.mysql_password }}">
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="mysql_password">MySQL Password</label>
-                    <input type="password" class="form-control" name="mysql_password" id="mysql_password"
-                           value="{{ config.mysql_password }}">
+
+                <!-- Host and Port Row -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="host">MySQL Host</label>
+                            <input type="text" class="form-control" name="host" id="host" value="{{ config.host }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="port">MySQL Port</label>
+                            <input type="text" class="form-control" name="port" id="port" value="{{ config.port }}">
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Migration Folder -->
                 <div class="form-group">
                     <label for="migration_folder">Migration Folder</label>
                     <input type="text" class="form-control" name="migration_folder" id="migration_folder"
                            value="{{ config.migration_folder }}">
                 </div>
+
                 <button type="submit" class="btn btn-primary">Save Configuration</button>
             </form>
-            {% if not valid_config %}
-                <div class="alert alert-warning mt-3">
-                    Configuration is missing or invalid. Please update your configuration to enable migration features.
-                </div>
-            {% endif %}
         </div>
     </div>
+
+
 
     <!-- Feature Cards -->
     <div class="card mb-4">
