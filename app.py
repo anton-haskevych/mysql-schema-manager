@@ -5,7 +5,6 @@ import datetime
 import shutil
 import math
 import subprocess
-import tempfile
 import re
 from flask import Flask, render_template, request, redirect, url_for, flash
 import mysql.connector
@@ -237,14 +236,22 @@ def update_config():
     global config
     mysql_username = request.form.get("mysql_username", "").strip()
     mysql_password = request.form.get("mysql_password", "").strip()
+    host = request.form.get("host", "").strip() or config.get("host", "localhost")
+    port_str = request.form.get("port", "").strip() or str(config.get("port", "3306"))
     migration_folder = request.form.get("migration_folder", "").strip()
     if not migration_folder:
         migration_folder = os.path.join(os.getcwd(), "migrations")
 
+    try:
+        port = int(port_str)
+    except ValueError:
+        flash("MySQL port must be a number.", "danger")
+        return redirect(url_for("dashboard"))
+
     # Attempt to connect to the MySQL database using the provided credentials.
     try:
         conn = mysql.connector.connect(
-            host="localhost", user=mysql_username, password=mysql_password
+            host=host, port=port, user=mysql_username, password=mysql_password
         )
         conn.close()
     except mysql.connector.Error as err:
@@ -254,6 +261,8 @@ def update_config():
     # If connection succeeds, update configuration.
     config["mysql_username"] = mysql_username
     config["mysql_password"] = mysql_password
+    config["host"] = host
+    config["port"] = str(port)
     config["migration_folder"] = migration_folder
     os.makedirs(migration_folder, exist_ok=True)
     save_config(config)
@@ -343,7 +352,8 @@ def delete_migration():
 @app.route("/dump_database", methods=["GET", "POST"])
 def dump_database():
     if request.method == "POST":
-        host = request.form.get("host", "localhost").strip()
+        host = request.form.get("host", "").strip() or config.get("host", "localhost")
+        port_str = request.form.get("port", "").strip() or str(config.get("port", "3306"))
         dump_username = request.form.get("dump_username", "").strip()
         dump_password = request.form.get("dump_password", "").strip()
         backup_folder = request.form.get("backup_folder", "").strip()
@@ -353,16 +363,14 @@ def dump_database():
         timestamp_folder = datetime.datetime.now().strftime("%m_%d_%Y_%I_%M_%p")
         full_backup_path = os.path.join(backup_folder, timestamp_folder)
         os.makedirs(full_backup_path, exist_ok=True)
-        config_contents = "[client]\n"
-        config_contents += f"user={dump_username}\n"
-        config_contents += f"password={dump_password}\n"
-        config_contents += f"host={host}\n"
-        with tempfile.NamedTemporaryFile(mode="w", delete=False) as tf:
-            tf.write(config_contents)
-            mysql_config_file = tf.name
+        try:
+            port = int(port_str)
+        except ValueError:
+            flash("MySQL port must be a number.", "danger")
+            return redirect(url_for("dump_database"))
         try:
             conn = mysql.connector.connect(
-                host=host, user=dump_username, password=dump_password
+                host=host, port=port, user=dump_username, password=dump_password
             )
             cursor = conn.cursor()
             cursor.execute("SHOW DATABASES")
@@ -371,7 +379,6 @@ def dump_database():
             conn.close()
         except mysql.connector.Error as err:
             flash(f"Error connecting to MySQL: {err}", "danger")
-            os.remove(mysql_config_file)
             return redirect(url_for("dump_database"))
         exclude = ["information_schema", "mysql", "sys", "performance_schema"]
         databases = [db for db in databases if db not in exclude]
@@ -382,7 +389,10 @@ def dump_database():
             backup_file = os.path.join(full_backup_path, f"{db}.sql")
             cmd = [
                 "mysqldump",
-                f"--defaults-extra-file={mysql_config_file}",
+                f"--host={host}",
+                f"--port={port}",
+                f"--user={dump_username}",
+                f"--password={dump_password}",
                 "--single-transaction",
                 "--set-gtid-purged=OFF",
                 db,
@@ -395,7 +405,6 @@ def dump_database():
                 flash(
                     f"Error dumping database {db}: {result.stderr.decode()}", "danger"
                 )
-        os.remove(mysql_config_file)
         if dumped_files:
             flash(
                 f"Dump completed. # of backed up databases: {len(dumped_files)}. Everything saved in folder: {full_backup_path}",

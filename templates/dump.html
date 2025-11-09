@@ -4,7 +4,11 @@
 <form method="POST" action="{{ url_for('dump_database') }}" id="dumpForm">
   <div class="form-group">
     <label for="host">MySQL Host</label>
-    <input type="text" class="form-control" id="host" name="host" placeholder="Enter MySQL host" value="localhost">
+    <input type="text" class="form-control" id="host" name="host" placeholder="Enter MySQL host" value="{{ config.host or 'localhost' }}">
+  </div>
+  <div class="form-group">
+    <label for="port">MySQL Port</label>
+    <input type="text" class="form-control" id="port" name="port" placeholder="Enter MySQL port" value="{{ config.port or '3306' }}">
   </div>
   <div class="form-group">
     <label for="dump_username">MySQL Username</label>
@@ -16,7 +20,7 @@
   </div>
   <div class="form-group">
     <label for="backup_folder">Backup Folder</label>
-    <input type="text" class="form-control" id="backup_folder" name="backup_folder" placeholder="Enter folder to store backups" value="{{ cwd }}/migrations">
+    <input type="text" class="form-control" id="backup_folder" name="backup_folder" placeholder="Enter folder to store backups" value="{{ config.backup_folder }}">
   </div>
   <button type="submit" class="btn btn-primary" id="dumpButton">Take Dump</button>
 </form>
